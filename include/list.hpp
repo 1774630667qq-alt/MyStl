@@ -1,0 +1,242 @@
+#pragma once
+#include <cstddef>
+#include "iterator.hpp"
+#include "type_traits.hpp"
+#include "utility.hpp"
+
+namespace MyStl {
+
+    // 1. 节点定义 (双向链表)
+    template<typename T>
+    struct ListNode {
+        T data;
+        ListNode* prev;
+        ListNode* next;
+
+        // 构造函数
+        ListNode(const T& val = T()) : data(val), prev(nullptr), next(nullptr) {}
+    };
+
+    // 2. 迭代器定义 (补充了 Traits)
+    template<typename T, bool IsConst = false>
+    struct ListIterator {
+        // =========================================================
+        // 🌟 迭代器的 5 个标准“身份证信息” (替代继承)
+        using iterator_category = MyStl::bidirectional_iterator_tag; // 迭代器类别
+        using value_type        = T;                               // 元素类型
+        using difference_type   = ptrdiff_t;                       // 距离类型
+        using pointer           = typename MyStl::conditional_t<IsConst, const T*, T*>;
+        using reference         = typename MyStl::conditional_t<IsConst, const T&, T&>;
+        // =========================================================
+
+        using ptr_type = typename MyStl::conditional_t<IsConst, const T*, T*>;
+
+        using Node = ListNode<T>;
+        Node* ptr; 
+
+        ListIterator(Node* p = nullptr) : ptr(p) {}
+
+        // TODO 1: 解引用运算符
+        reference operator*() const {
+            return ptr->data;
+        }
+
+        // TODO 2: 箭头运算符
+        pointer operator->() const {
+            return &ptr->data;
+        }
+
+        // TODO 3: 前置 ++ (++it)
+        ListIterator& operator++() {
+            ptr = ptr->next;
+            return *this;
+        }
+
+        // TODO 4: 后置 ++ (it++)
+        ListIterator operator++(int) {
+            ListIterator temp = *this; 
+            ptr = ptr->next;           
+            return temp;               
+        }
+
+        ListIterator& operator--() {
+            ptr = ptr->prev;
+            return *this;
+        }
+
+        ListIterator operator--(int) {
+            ListIterator temp = *this;
+            ptr = ptr->prev;
+            return temp;
+        }
+
+        // TODO 5: 判等
+        bool operator==(const ListIterator& other) const {
+            return ptr == other.ptr;
+        }
+        bool operator!=(const ListIterator& other) const {
+            return ptr != other.ptr;
+        }
+    };
+
+    // 3. 链表主体类 (预览，先不用实现具体逻辑)
+    template<typename T>
+    class list {
+    public:
+        using iterator = ListIterator<T>;
+        using const_iterator = ListIterator<T, true>;
+
+        using Node = ListNode<T>;
+
+    private:
+        // 思考：为了方便，我们要不要在这里用一个 dummy_node (哨兵节点)？
+        /*
+        由于当前类为双端队列所以链表尾端应该和链表首端相连，如果添加一个哨兵节点反而人为的将首端节点和尾端节点隔绝开来了
+        结论：不需要，直接直接将首端节点视为尾端节点的后继，尾端节点视为首端节点的前驱即可
+        */
+        Node* Node_; // 哨兵节点 
+        size_t size_;
+
+    public:
+        list();
+        list(const list& other);
+        list(list&& other) noexcept;
+        list& operator=(const list& other);
+        list& operator=(list&& other) noexcept;
+        ~list();
+        void push_back(const T& val);
+        void push_front(const T& val);
+        void pop_back();
+        void pop_front();
+        void clean();
+        iterator insert(iterator pos, const T& val);
+        iterator erase(iterator pos);
+        iterator begin();
+        iterator end();
+        const_iterator begin() const;
+        const_iterator end() const;
+    };
+    template<typename T>
+    list<T>::list(): Node_(new Node()), size_(0) {
+        Node_->prev = Node_;
+        Node_->next = Node_;
+    }
+
+    template<typename T>
+    list<T>::list(const list& other) : Node_(new Node()), size_(0) {
+        Node_->prev = Node_;
+        Node_->next = Node_;
+        for (const auto& val : other) {
+            push_back(val);
+        }
+    }
+
+    template<typename T>
+    list<T>::list(list&& other) noexcept : Node_(new Node()), size_(0) {
+        Node_->prev = Node_;
+        Node_->next = Node_;
+        MyStl::swap(size_, other.size_);
+        MyStl::swap(Node_, other.Node_);
+    }
+
+    template<typename T>
+    list<T>& list<T>::operator=(const list& other) {
+        if (this != &other) {
+            clean();
+            for (const auto& val : other) {
+                push_back(val);
+            }
+        }
+        return *this;
+    }
+
+    template<typename T>
+    list<T>& list<T>::operator=(list&& other) noexcept {
+        if (this != &other) {
+            MyStl::swap(size_, other.size_);
+            MyStl::swap(Node_, other.Node_);
+        }
+        return *this;
+    }
+
+    template<typename T>
+    typename list<T>::iterator list<T>::insert(iterator pos, const T& val) {
+        Node* p = pos.ptr;
+        Node* newnode = new Node(val);
+        newnode->prev = p->prev;
+        newnode->next = p;
+        p->prev->next = newnode;
+        p->prev = newnode;
+        ++size_;
+        return iterator(newnode);
+    }
+
+    template<typename T>
+    void list<T>::clean() {
+        while (size_ > 0) {
+            pop_back();
+        }
+    }
+
+    template<typename T>
+    typename list<T>::iterator list<T>::erase(iterator pos) {
+        if (pos == end()) return pos; // 如果是 end，直接返回 end
+        Node* p = pos.ptr;
+        Node* next_node = p->next;
+        p->prev->next = p->next;
+        p->next->prev = p->prev;
+        delete p;
+        --size_;
+        return iterator(next_node); // 返回下一个节点的迭代器
+    }
+
+    template<typename T>
+    void list<T>::pop_back() {
+        if (size_ > 0) {
+            erase(Node_->prev);
+        }
+    }
+
+    template<typename T>
+    void list<T>::pop_front() {
+        if (size_ > 0) {
+            erase(Node_->next);
+        }
+    }
+
+    template<typename T>
+    void list<T>::push_back(const T& val) {
+        insert(Node_, val);
+    }
+
+    template<typename T>
+    void list<T>::push_front(const T& val) {
+        insert(begin(), val);
+    }
+
+    template<typename T>
+    typename list<T>::iterator list<T>::begin() {
+        return iterator(Node_->next);
+    }
+
+    template<typename T>
+    typename list<T>::iterator list<T>::end() {
+        return iterator(Node_);
+    }
+
+    template<typename T>
+    typename list<T>::const_iterator list<T>::begin()const {
+        return const_iterator(Node_->next);
+    }
+
+    template<typename T>
+    typename list<T>::const_iterator list<T>::end() const {
+        return const_iterator(Node_);
+    }
+
+    template<typename T>
+    list<T>::~list() {
+        clean();
+        delete Node_;
+    }
+}

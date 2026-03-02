@@ -1,7 +1,7 @@
 #pragma once
 #include <cstddef>
-#include <type_traits>
-#include <utility>
+#include "type_traits.hpp"
+#include "utility.hpp"
 
 namespace MyStl {
     template<typename T>
@@ -26,18 +26,37 @@ namespace MyStl {
             other.ptr = nullptr; 
         }
 
-        unique_ptr& operator=(unique_ptr&& other) noexcept {
-            if (this != &other) {
-                delete ptr;
-                ptr = other.ptr;
-                other.ptr = nullptr;
-            }
-            return *this;
-        }
-
         unique_ptr& operator=(std::nullptr_t) {
             delete ptr;
             ptr = nullptr;
+            return *this;
+        }
+
+        Pointer release() {
+            Pointer temp = ptr;
+            ptr = nullptr;
+            return temp;
+        }
+
+        void reset(Pointer p = nullptr) {
+            // 关键：防止自重置导致的 Double Free
+            Pointer old_ptr = ptr;
+            ptr = p;
+            if (old_ptr) delete old_ptr; 
+        }
+
+        explicit operator bool() const {
+            return ptr != nullptr;
+        }
+
+        void swap(unique_ptr& other) noexcept {
+            MyStl::swap(ptr, other.ptr);
+        }
+
+        unique_ptr& operator=(unique_ptr&& other) noexcept {
+            if (this != &other) {
+                swap(other); 
+            }
             return *this;
         }
 
@@ -80,11 +99,30 @@ namespace MyStl {
             other.ptr = nullptr;
         }
 
+        Pointer release() {
+            Pointer temp = ptr;
+            ptr = nullptr;
+            return temp;
+        }
+
+        void reset(Pointer p = nullptr) {
+            // 关键：防止自重置导致的 Double Free
+            Pointer old_ptr = ptr;
+            ptr = p;
+            if (old_ptr) delete[] old_ptr; 
+        }
+
+        explicit operator bool() const {
+            return ptr != nullptr;
+        }
+
+        void swap(unique_ptr& other) noexcept {
+            MyStl::swap(ptr, other.ptr);
+        }
+
         unique_ptr& operator=(unique_ptr&& other) noexcept {
             if (this != &other) {
-                delete[] ptr; // 核心区别：使用 delete[]
-                ptr = other.ptr;
-                other.ptr = nullptr;
+                swap(other);
             }
             return *this;
         }
@@ -109,18 +147,29 @@ namespace MyStl {
         }
     };
 
+    template<typename T>
+    void swap(unique_ptr<T>& lhs, unique_ptr<T>& rhs) noexcept {
+        lhs.swap(rhs);
+    }
+
+    // 针对数组版本的重载
+    template<typename T>
+    void swap(unique_ptr<T[]>& lhs, unique_ptr<T[]>& rhs) noexcept {
+        lhs.swap(rhs);
+    }
+
     // 1. 针对非数组类型 (Single Object)
     template<typename T, typename... Args>
-    typename std::enable_if<!std::is_array<T>::value, unique_ptr<T>>::type
+    typename MyStl::enable_if<!MyStl::is_array<T>::value, unique_ptr<T>>::type
     make_unique(Args&&... args) {
-        return unique_ptr<T>(new T(std::forward<Args>(args)...));
+        return unique_ptr<T>(new T(MyStl::forward<Args>(args)...));
     }
 
     // 2. 针对数组类型 (Array)
     template<typename T>
-    typename std::enable_if<std::is_array<T>::value, unique_ptr<T>>::type
+    typename MyStl::enable_if<MyStl::is_array<T>::value, unique_ptr<T>>::type
     make_unique(std::size_t size) {
-        using U = typename std::remove_extent<T>::type;
+        using U = typename MyStl::remove_extent<T>::type;
         return unique_ptr<T>(new U[size]());
     }
 }
