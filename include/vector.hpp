@@ -125,12 +125,18 @@ namespace MyStl {
         void pop_back();
         void reserve(int capacity);
         void resize(int new_size, const T& value = T());
+        void assign(int size, const T& value);
         template<typename... Args>
         void emplace_back(Args&&... args) noexcept;
         iterator erase(iterator pos);
         iterator insert(iterator pos, const T& value);
         int size() const;
         void clear();
+        bool empty() const { return m_size == 0; }
+        T& front() { return Vec[0]; }
+        const T& front() const { return Vec[0]; }
+        T& back() { return Vec[m_size - 1]; }
+        const T& back() const { return Vec[m_size - 1]; }
     };
 
     template<typename T>
@@ -379,6 +385,25 @@ namespace MyStl {
             }
         }
         m_size = new_size;
+    }
+
+    template<typename T>
+    void vector<T>::assign(int size, const T& value) {
+        if (size > m_capacity) {
+            reserve(size);
+        }
+        for (int i = 0; i < size; ++i) {
+            if (i < m_size) {
+                Vec[i] = value; // 已经存在的元素直接赋值
+            } else {
+                ::new (static_cast<void*>(Vec + i)) T(value); // 新增元素需要构造
+            }
+        }
+        // 如果新 size 小于当前 size，析构多余的元素
+        for (int i = size; i < m_size; ++i) {
+            Vec[i].~T();
+        }
+        m_size = size;
     }
 
     template<typename T>

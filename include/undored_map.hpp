@@ -73,13 +73,16 @@ namespace MyStl {
         public:
         unordered_map(): buckets(8, nullptr), size_(0) {}
 
-        void insert(const K& key, const V& val) {
+        iterator insert(const K& key, const V& val) {
+            if (size_ >= buckets.size()) {
+                rehash(buckets.size() * 2);
+            }
+            
             size_t index = bucket_index(key);
+            // 1. new 出带有真实数据的子类节点
+            HashNode<K, V>* newNode = new HashNode<K, V>(MyStl::make_pair(key, val));
 
             if (buckets[index] == nullptr) {
-                // 1. new 出带有真实数据的子类节点
-                HashNode<K, V>* newNode = new HashNode<K, V>(MyStl::make_pair(key, val));
-
                 if (Node_.next != nullptr) {
                     // 这里好像错误了？
                     // HashNode<K, V>* old_first = static_cast<HashNode<K, V>*>(buckets[index]);
@@ -104,11 +107,11 @@ namespace MyStl {
                     这是一个思维误导？对于第二个问题，想来是不需要修改的，由于我们使用的是逻辑桶链表的头插，只要将原链表的前驱指向新的头节点即可
                     等等，什么时候桶会共用一个前驱，好像只有空插时会出现该问题也就是说另一个分支有问题。
                 */
-                HashNode<K, V>* newNode = new HashNode<K, V>(MyStl::make_pair(key, val));
                 newNode->next = buckets[index]->next;
                 buckets[index]->next = newNode;
                 ++size_;
             }
+            return iterator(newNode);
         }
 
         iterator begin() {
@@ -216,14 +219,29 @@ namespace MyStl {
                 return it->second;
             }
             // 2. 如果不存在，就插入一个默认值，然后返回这个新插入的 value 的引用
-            insert(key, V());
-            return find(key)->second;
+            return insert(key, V())->second;
         }
 
-        void clean() {}
+        void clear() {
+            HashNodeBase* curr = Node_.next;
+            while (curr != nullptr) { // 清空单链表
+                HashNodeBase* temp = curr->next;
+                delete static_cast<HashNode<K, V>*>(curr);
+                curr = temp;
+            }
+            Node_.next = nullptr; // 关键：哨兵节点必须指向空，否则是野指针
+
+            buckets.assign(buckets.size(), nullptr); // 桶数组重置为全空
+            
+            size_ = 0;
+        }
+
+        size_t size() const {
+            return size_;
+        }
 
         ~unordered_map() {
-            clean();
+            clear();
             // 这里不需要 delete Node_; 因为它是栈上的实体对象，会自动销毁！
         }
     };
