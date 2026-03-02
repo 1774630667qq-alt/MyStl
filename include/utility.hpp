@@ -2,7 +2,35 @@
 #include "type_traits.hpp"
 
 namespace MyStl {
+    // move
+    template<typename T>
+    constexpr typename MyStl::remove_reference_t<T>&& move(T&& arg) noexcept {
+        return static_cast<typename MyStl::remove_reference_t<T>&&>(arg);
+    }
 
+    // forward (左值版本)
+    template<typename T>
+    constexpr T&& forward(typename MyStl::remove_reference_t<T>& arg) noexcept {
+        return static_cast<T&&>(arg);
+    }
+
+    // forward (右值版本)
+    template<typename T>
+    constexpr T&& forward(typename MyStl::remove_reference_t<T>&& arg) noexcept {
+        return static_cast<T&&>(arg);
+    }
+
+    // swap
+    // [优化] 加上 noexcept 规范，如果 move 是不抛异常的，swap 也不抛异常
+    template<typename T>
+    void swap(T& a, T& b) noexcept(
+        MyStl::is_nothrow_move_constructible_v<T> && 
+        noexcept(a = MyStl::move(b)) // 这里简化了，严谨应该检测 is_nothrow_move_assignable
+    ) {
+        T temp = MyStl::move(a);
+        a = MyStl::move(b);
+        b = MyStl::move(temp);
+    }
     template <typename T1, typename T2>
     struct pair {
         using first_type  = T1;
@@ -33,35 +61,5 @@ namespace MyStl {
     template <typename T1, typename T2>
     constexpr pair<T1, T2> make_pair(T1&& a, T2&& b) {
         return pair<T1, T2>(MyStl::forward<T1>(a), MyStl::forward<T2>(b));
-    }
-
-    // move
-    template<typename T>
-    constexpr typename MyStl::remove_reference_t<T>&& move(T&& arg) noexcept {
-        return static_cast<typename MyStl::remove_reference_t<T>&&>(arg);
-    }
-
-    // forward (左值版本)
-    template<typename T>
-    constexpr T&& forward(typename MyStl::remove_reference_t<T>& arg) noexcept {
-        return static_cast<T&&>(arg);
-    }
-
-    // forward (右值版本)
-    template<typename T>
-    constexpr T&& forward(typename MyStl::remove_reference_t<T>&& arg) noexcept {
-        return static_cast<T&&>(arg);
-    }
-
-    // swap
-    // [优化] 加上 noexcept 规范，如果 move 是不抛异常的，swap 也不抛异常
-    template<typename T>
-    void swap(T& a, T& b) noexcept(
-        MyStl::is_nothrow_move_constructible_v<T> && 
-        noexcept(a = MyStl::move(b)) // 这里简化了，严谨应该检测 is_nothrow_move_assignable
-    ) {
-        T temp = MyStl::move(a);
-        a = MyStl::move(b);
-        b = MyStl::move(temp);
     }
 }
