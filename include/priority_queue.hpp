@@ -7,7 +7,7 @@ namespace MyStl {
         typename Container = MyStl::vector<T>,
         typename Compare = MyStl::less<T> >
     class priority_queue {
-        private:
+        protected:
         Container c;
         Compare comp;
 

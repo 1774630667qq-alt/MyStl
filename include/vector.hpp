@@ -89,6 +89,10 @@ namespace MyStl {
         using ValueType = T;
         using iterator = vectorIterator<T, false>;
         using const_iterator = vectorIterator<T, true>;
+        using pointer = T*;
+        using reference = T&;
+        using const_pointer = const T*;
+        using const_reference = const T&;
 
         using reverse_iterator = MyStl::reverse_iterator<iterator>;
         using const_reverse_iterator = MyStl::reverse_iterator<const_iterator>;
@@ -104,8 +108,8 @@ namespace MyStl {
         vector(const vector& vec);
         vector(vector&& vec);
         ~vector();
-        T& operator[](int index);
-        T& operator[](int index) const;
+        reference operator[](int index);
+        const_reference operator[](int index) const;
         iterator begin();
         iterator end();
         reverse_iterator rbegin();
@@ -133,10 +137,10 @@ namespace MyStl {
         int size() const;
         void clear();
         bool empty() const { return m_size == 0; }
-        T& front() { return Vec[0]; }
-        const T& front() const { return Vec[0]; }
-        T& back() { return Vec[m_size - 1]; }
-        const T& back() const { return Vec[m_size - 1]; }
+        reference front() { return Vec[0]; }
+        const_reference front() const { return Vec[0]; }
+        reference back() { return Vec[m_size - 1]; }
+        const_reference back() const { return Vec[m_size - 1]; }
     };
 
     template<typename T>
@@ -190,7 +194,7 @@ namespace MyStl {
     }
 
     template<typename T>
-    T& vector<T>::operator[](int index) {
+    typename vector<T>::reference vector<T>::operator[](int index) {
         if (index < 0 || index >= m_size) {
             throw std::out_of_range("Index out of range");
         }
@@ -198,7 +202,7 @@ namespace MyStl {
     }
 
     template<typename T>
-    T& vector<T>::operator[](int index) const {
+    typename vector<T>::const_reference vector<T>::operator[](int index) const {
         if (index < 0 || index >= m_size) {
             throw std::out_of_range("Index out of range");
         }

@@ -85,7 +85,10 @@ namespace MyStl {
     public:
         using iterator = ListIterator<T>;
         using const_iterator = ListIterator<T, true>;
-
+        using pointer = T*;
+        using reference = T&;
+        using const_pointer = const T*;
+        using const_reference = const T&;
         using Node = ListNode<T>;
 
     private:
@@ -108,7 +111,13 @@ namespace MyStl {
         void push_front(const T& val);
         void pop_back();
         void pop_front();
+        bool empty() const;
         void clean();
+        reference front();
+        const_reference front() const;
+        reference back();
+        const_reference back() const;
+        size_t size() const;
         iterator insert(iterator pos, const T& val);
         iterator erase(iterator pos);
         iterator begin();
@@ -179,6 +188,31 @@ namespace MyStl {
     }
 
     template<typename T>
+    size_t list<T>::size() const {
+        return size_;
+    }
+
+    template<typename T>
+    typename list<T>::reference list<T>::front() {
+        return Node_->next->data;
+    }
+
+    template<typename T>
+    typename list<T>::const_reference list<T>::front() const {
+        return Node_->next->data;
+    }
+
+    template<typename T>
+    typename list<T>::reference list<T>::back() {
+        return Node_->prev->data;
+    }
+
+    template<typename T>
+    typename list<T>::const_reference list<T>::back() const {
+        return Node_->prev->data;
+    }
+
+    template<typename T>
     typename list<T>::iterator list<T>::erase(iterator pos) {
         if (pos == end()) return pos; // 如果是 end，直接返回 end
         Node* p = pos.ptr;
@@ -202,6 +236,11 @@ namespace MyStl {
         if (size_ > 0) {
             erase(Node_->next);
         }
+    }
+
+    template<typename T>
+    bool list<T>::empty() const {
+        return size_ == 0;
     }
 
     template<typename T>
