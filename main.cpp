@@ -1,17 +1,25 @@
 #include <iostream>
-#include <deque>
+#include "deque.hpp"
+#include "undored_map.hpp"
+
 int main() {
-    std::deque<int> d;
-    d.push_back(1);
-    d.push_back(2);
-    d.push_back(3);
-
-    for (const auto& item : d) {
-        std::cout << item << " ";
+    MyStl::deque<int> d;
+    
+    for (int i = 0; i < 10000; i++) {
+        d.push_back(i + 1);
     }
-    std::cout << std::endl;
-    std::cout << d[1] << std::endl; // 输出 2
 
+    // for (const auto& item : d) {
+    //     std::cout << item << " ";
+    // }
+    std::cout << d.size() << std::endl; // 输出 10000
+    std::cout << d[9999] << std::endl; // 输出 10000
+
+    MyStl::unordered_map<int, int> mp;
+    for (int i = 1; i <= 10; i++) {
+        mp[i] = i;
+    }
+    
     return 0;
     
 }
