@@ -194,7 +194,7 @@ namespace MyStl {
     }
 
     template<typename T>
-    typename vector<T>::reference vector<T>::operator[](int index) {
+    T& vector<T>::operator[](int index) {
         if (index < 0 || index >= m_size) {
             throw std::out_of_range("Index out of range");
         }
