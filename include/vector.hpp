@@ -2,10 +2,10 @@
 #include <cstddef>
 #include <stdexcept>
 #include <initializer_list>
-#include <memory>
 #include "utility.hpp"
 #include "type_traits.hpp"
 #include "iterator.hpp"
+#include "allocator.hpp"
 
 namespace MyStl {
 
@@ -100,7 +100,7 @@ namespace MyStl {
         T* Vec;
         int m_size;
         int m_capacity;
-        std::allocator<T> alloc;
+        using allocator_type = MyStl::allocator<T>;
         public:
         vector();
         vector(int size, const T& value = T());
@@ -147,10 +147,9 @@ namespace MyStl {
     vector<T>::vector() : Vec(nullptr), m_size(0), m_capacity(0) {}
     template<typename T>
     vector<T>::vector(const vector<T>& vec): m_size(vec.m_size), m_capacity(vec.m_capacity) {
-        std::allocator<T> alloc;
-        Vec = alloc.allocate(m_capacity);
+        Vec = allocator_type::allocate(m_capacity);
         for (int i = 0; i < m_size; ++i) {
-            ::new (static_cast<void*>(Vec + i)) T(vec.Vec[i]);
+            allocator_type::construct(Vec + i, vec.Vec[i]);
         }
     }
 
@@ -158,7 +157,7 @@ namespace MyStl {
     vector<T>::vector(int size, const T& value) : Vec(nullptr), m_size(0), m_capacity(0) {
         reserve(size);
         for (int i = 0; i < size; ++i) {
-            ::new (static_cast<void*>(Vec + i)) T(value);
+            allocator_type::construct(Vec + i, value);
         }
         m_size = size;
     }
@@ -175,10 +174,10 @@ namespace MyStl {
 
     template<typename T>
     vector<T>::vector(std::initializer_list<T> list) : m_size(list.size()), m_capacity(list.size()) {
-        Vec = alloc.allocate(m_capacity);
+        Vec = allocator_type::allocate(m_capacity);
         int index = 0;
         for (const auto& item : list) {
-            ::new (static_cast<void*>(Vec + index)) T(item);
+            allocator_type::construct(Vec + index, item);
             ++index;
         }
     }
@@ -187,7 +186,7 @@ namespace MyStl {
     vector<T>::~vector() {
         clear();
         if (m_capacity > 0) 
-            alloc.deallocate(Vec, m_capacity);
+            allocator_type::deallocate(Vec, m_capacity);
         Vec = nullptr;
         m_size = 0;
         m_capacity = 0;
@@ -216,9 +215,9 @@ namespace MyStl {
         }
         m_size = vec.m_size;
         m_capacity = vec.m_capacity;
-        Vec = alloc.allocate(m_capacity);
+        Vec = allocator_type::allocate(m_capacity);
         for (int i = 0; i < m_size; ++i) {
-            ::new (static_cast<void*>(Vec + i)) T(vec.Vec[i]);
+            allocator_type::construct(Vec + i, vec.Vec[i]);
         }
         return *this;
     }
@@ -227,10 +226,10 @@ namespace MyStl {
     vector<T>& vector<T>::operator=(std::initializer_list<T> list) {
         m_size = list.size();
         m_capacity = list.size();
-        Vec = alloc.allocate(m_capacity);
+        Vec = allocator_type::allocate(m_capacity);
         int index = 0;
         for (const auto& item : list) {
-            ::new (static_cast<void*>(Vec + index)) T(item);
+            allocator_type::construct(Vec + index, item);
             ++index;
         }
         return *this;
@@ -292,7 +291,7 @@ namespace MyStl {
             return *this;
         }
         clear();
-        alloc.deallocate(Vec, m_capacity);
+        allocator_type::deallocate(Vec, m_capacity);
         Vec = vec.Vec;
         m_size = vec.m_size;
         m_capacity = vec.m_capacity;
@@ -327,12 +326,12 @@ namespace MyStl {
         else {
             m_capacity *= 2;
         }
-        T* newVec = alloc.allocate(m_capacity);
+        T* newVec = allocator_type::allocate(m_capacity);
         for (int i = 0; i < m_size; ++i) {
-            ::new (static_cast<void*>(newVec + i)) T(MyStl::move(Vec[i]));
-            Vec[i].~T();
+            allocator_type::construct(newVec + i, MyStl::move(Vec[i]));
+            allocator_type::destroy(Vec + i);
         }
-        alloc.deallocate(Vec, old_capacity);
+        allocator_type::deallocate(Vec, old_capacity);
         Vec = newVec;
         newVec = nullptr;
     }
@@ -342,14 +341,14 @@ namespace MyStl {
         if (m_size >= m_capacity) {
             expand();
         }
-        new (Vec + m_size) T(value);
+        allocator_type::construct(Vec + m_size, value);
         ++m_size;
     }
 
     template<typename T>
     void vector<T>::pop_back() {
         if (m_size > 0) {
-            Vec[m_size - 1].~T();
+            allocator_type::destroy(Vec + m_size - 1);
             --m_size;
         }
     }
@@ -357,13 +356,13 @@ namespace MyStl {
     template<typename T>
     void vector<T>::reserve(int capacity) {
         if (capacity < m_capacity) return; // 只有当新容量大于当前容量时才进行反转和扩容
-        T* newVec = alloc.allocate(capacity); // 扩容三步走 申请 -> 搬家 -> 释放旧空间
+        T* newVec = allocator_type::allocate(capacity); // 扩容三步走 申请 -> 搬家 -> 释放旧空间
         for (int i = 0; i < m_size; ++i) {
-            ::new (static_cast<void*>(newVec + i)) T(MyStl::move(Vec[m_size - 1 - i]));
-            Vec[m_size - 1 - i].~T();
+            allocator_type::construct(newVec + i, MyStl::move(Vec[i]));
+            allocator_type::destroy(Vec + i);
         }
         if (m_capacity > 0) {
-            alloc.deallocate(Vec, m_capacity);
+            allocator_type::deallocate(Vec, m_capacity);
         }
         Vec = newVec;
         m_capacity = capacity;
@@ -374,7 +373,7 @@ namespace MyStl {
         if (new_size < m_size) {
             // 缩小：析构多余的
             for (int i = new_size; i < m_size; ++i) {
-                Vec[i].~T();
+                allocator_type::destroy(Vec + i);
             }
         } else if (new_size > m_size) {
             // 增大：如果超过容量，先扩容
@@ -385,7 +384,7 @@ namespace MyStl {
             }
             // 构造新增的元素
             for (int i = m_size; i < new_size; ++i) {
-                ::new (static_cast<void*>(Vec + i)) T(value);
+                allocator_type::construct(Vec + i, value);
             }
         }
         m_size = new_size;
@@ -400,12 +399,12 @@ namespace MyStl {
             if (i < m_size) {
                 Vec[i] = value; // 已经存在的元素直接赋值
             } else {
-                ::new (static_cast<void*>(Vec + i)) T(value); // 新增元素需要构造
+                allocator_type::construct(Vec + i, value); // 新增元素需要构造
             }
         }
         // 如果新 size 小于当前 size，析构多余的元素
         for (int i = size; i < m_size; ++i) {
-            Vec[i].~T();
+            allocator_type::destroy(Vec + i);
         }
         m_size = size;
     }
@@ -418,7 +417,7 @@ namespace MyStl {
         for (iterator i = pos; i + 1 < end(); ++i) {
             *i = MyStl::move(*(i + 1));
         }
-        Vec[m_size - 1].~T();
+        allocator_type::destroy(Vec + m_size - 1);
         --m_size;
         return pos;
     }
@@ -434,29 +433,29 @@ namespace MyStl {
 
         if (m_size >= m_capacity) {
             int new_capacity = (m_capacity == 0) ? 1 : m_capacity * 2;
-            T* newVec = alloc.allocate(new_capacity);
+            T* newVec = allocator_type::allocate(new_capacity);
 
             for (int i = 0; i < index; ++i) {
-                ::new (static_cast<void*>(newVec + i)) T(MyStl::move(Vec[i]));
-                Vec[i].~T();
+                allocator_type::construct(newVec + i, MyStl::move(Vec[i]));
+                allocator_type::destroy(Vec + i);
             }
-            ::new (static_cast<void*>(newVec + index)) T(old_value);
+            allocator_type::construct(newVec + index, old_value);
             for (int i = index; i < m_size; ++i) {
-                ::new (static_cast<void*>(newVec + i + 1)) T(MyStl::move(Vec[i]));
-                Vec[i].~T();
+                allocator_type::construct(newVec + i + 1, MyStl::move(Vec[i]));
+                allocator_type::destroy(Vec + i);
             }
 
             if (m_capacity > 0) {
-                alloc.deallocate(Vec, m_capacity);
+                allocator_type::deallocate(Vec, m_capacity);
             }
             Vec = newVec;
             m_capacity = new_capacity;
         }
         else {
             if (index == m_size) {
-                ::new (static_cast<void*>(Vec + m_size)) T(old_value);
+                allocator_type::construct(Vec + m_size, old_value);
             } else {
-                ::new (static_cast<void*>(Vec + m_size)) T(MyStl::move(Vec[m_size - 1]));
+                allocator_type::construct(Vec + m_size, MyStl::move(Vec[m_size - 1]));
                 for (int i = m_size - 1; i > index; --i) {
                     Vec[i] = MyStl::move(Vec[i - 1]);
                 }
@@ -473,7 +472,7 @@ namespace MyStl {
         if (m_size >= m_capacity) {
             expand();
         }
-        ::new (static_cast<void*>(Vec + m_size)) T(MyStl::forward<Args>(args)...);
+        allocator_type::construct(Vec + m_size, MyStl::forward<Args>(args)...);
         ++m_size;
     }
 
@@ -485,7 +484,7 @@ namespace MyStl {
     template<typename T>
     void vector<T>::clear() {
         for (int i = 0; i < m_size; ++i) {
-            Vec[i].~T();
+            allocator_type::destroy(Vec + i);
         }
         m_size = 0;
     }

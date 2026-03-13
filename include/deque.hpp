@@ -1,6 +1,7 @@
 #include <cstddef>
 #include "type_traits.hpp"
 #include "iterator.hpp"
+#include "allocator.hpp"
 namespace MyStl {
     inline size_t deque_buffer_size() {
         return 64; // 每个缓冲区存放64个元素
@@ -120,6 +121,8 @@ namespace MyStl {
         using const_reference = const T&;
         using buffer_pointer = pointer*;
         
+        using map_allocator = MyStl::allocator<pointer>;
+        using data_allocator = MyStl::allocator<T>;
         private:
         buffer_pointer map; // 指向缓冲区指针的指针
         size_t map_size; // map的大小（缓冲区指针的数量）
@@ -128,9 +131,15 @@ namespace MyStl {
 
         public:
         deque() {
-            map = new pointer[8](); // 初始分配8个缓冲区指针
+            map = map_allocator::allocate(8); // 初始分配8个缓冲区指针
+            for (int i = 0; i < 8; ++i) map[i] = nullptr;
             map_size = 8;
-            pointer buffer = new T[deque_buffer_size()]; // 分配第一个缓冲区
+
+            pointer buffer = data_allocator::allocate(deque_buffer_size()); // 分配第一个缓冲区
+            for (size_t i = 0; i < deque_buffer_size(); ++i) {
+                data_allocator::construct(buffer + i);
+            }
+
             map[3] = buffer; // 将第4个缓冲区指针指向第一个缓冲区
             start = iterator(map + 3, buffer + deque_buffer_size() / 2); // 从缓冲区中间开始
             finish = iterator(map + 3, buffer + deque_buffer_size() / 2); // 初始时没有元素
@@ -138,6 +147,21 @@ namespace MyStl {
 
         iterator begin() { return start; }
         iterator end() { return finish; }
+        
+        ~deque() {
+            // 释放所有已分配的缓冲区
+            for (size_t i = 0; i < map_size; ++i) {
+                if (map[i] != nullptr) {
+                    for (size_t j = 0; j < deque_buffer_size(); ++j) {
+                        data_allocator::destroy(map[i] + j);
+                    }
+                    data_allocator::deallocate(map[i], deque_buffer_size());
+                }
+            }
+            // 释放 map 本身
+            map_allocator::deallocate(map, map_size);
+        }
+
         const_iterator begin() const { return start; }
         const_iterator end() const { return finish; }
         const_iterator cbegin() const { return start; }
@@ -162,7 +186,8 @@ namespace MyStl {
 
             // 2. 申请两倍大的新 Map，并自动初始化为空指针
             size_t new_map_size = map_size * 2;
-            buffer_pointer new_map = new pointer[new_map_size]();
+            buffer_pointer new_map = map_allocator::allocate(new_map_size);
+            for (size_t i = 0; i < new_map_size; ++i) new_map[i] = nullptr;
 
             // 3. 计算居中对齐的起始下标
             size_t new_start_idx = (new_map_size - used_nodes) / 2;
@@ -173,7 +198,7 @@ namespace MyStl {
             }
 
             // 5. 销毁旧 Map，避免内存泄漏
-            delete[] map;
+            map_allocator::deallocate(map, map_size);
             
             // 6. 更新容器状态
             map = new_map;
@@ -193,7 +218,11 @@ namespace MyStl {
                 if (finish.node + 1 == map + map_size) {
                     expand(); // Map 满了，触发中控器扩容
                 }
-                *(finish.node + 1) = new T[deque_buffer_size()]; 
+                pointer new_buffer = data_allocator::allocate(deque_buffer_size());
+                for (size_t i = 0; i < deque_buffer_size(); ++i) {
+                    data_allocator::construct(new_buffer + i);
+                }
+                *(finish.node + 1) = new_buffer; 
             }
             ++finish; 
         }
@@ -205,7 +234,11 @@ namespace MyStl {
                     expand();
                 }
                 // 核心：只管修路！
-                *(start.node - 1) = new T[deque_buffer_size()];
+                pointer new_buffer = data_allocator::allocate(deque_buffer_size());
+                for (size_t i = 0; i < deque_buffer_size(); ++i) {
+                    data_allocator::construct(new_buffer + i);
+                }
+                *(start.node - 1) = new_buffer;
             }
             --start; 
             *start = value; 

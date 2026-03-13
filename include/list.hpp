@@ -3,6 +3,7 @@
 #include "iterator.hpp"
 #include "type_traits.hpp"
 #include "utility.hpp"
+#include "allocator.hpp"
 
 namespace MyStl {
 
@@ -90,6 +91,7 @@ namespace MyStl {
         using const_pointer = const T*;
         using const_reference = const T&;
         using Node = ListNode<T>;
+        using node_allocator = MyStl::allocator<Node>;
 
     private:
         // 思考：为了方便，我们要不要在这里用一个 dummy_node (哨兵节点)？
@@ -126,13 +128,17 @@ namespace MyStl {
         const_iterator end() const;
     };
     template<typename T>
-    list<T>::list(): Node_(new Node()), size_(0) {
+    list<T>::list(): size_(0) {
+        Node_ = node_allocator::allocate(1);
+        node_allocator::construct(Node_); // 构造哨兵节点
         Node_->prev = Node_;
         Node_->next = Node_;
     }
 
     template<typename T>
-    list<T>::list(const list& other) : Node_(new Node()), size_(0) {
+    list<T>::list(const list& other) : size_(0) {
+        Node_ = node_allocator::allocate(1);
+        node_allocator::construct(Node_);
         Node_->prev = Node_;
         Node_->next = Node_;
         for (const auto& val : other) {
@@ -141,7 +147,9 @@ namespace MyStl {
     }
 
     template<typename T>
-    list<T>::list(list&& other) noexcept : Node_(new Node()), size_(0) {
+    list<T>::list(list&& other) noexcept : size_(0) {
+        Node_ = node_allocator::allocate(1);
+        node_allocator::construct(Node_);
         Node_->prev = Node_;
         Node_->next = Node_;
         MyStl::swap(size_, other.size_);
@@ -171,7 +179,8 @@ namespace MyStl {
     template<typename T>
     typename list<T>::iterator list<T>::insert(iterator pos, const T& val) {
         Node* p = pos.ptr;
-        Node* newnode = new Node(val);
+        Node* newnode = node_allocator::allocate(1);
+        node_allocator::construct(newnode, val);
         newnode->prev = p->prev;
         newnode->next = p;
         p->prev->next = newnode;
@@ -219,7 +228,8 @@ namespace MyStl {
         Node* next_node = p->next;
         p->prev->next = p->next;
         p->next->prev = p->prev;
-        delete p;
+        node_allocator::destroy(p);
+        node_allocator::deallocate(p, 1);
         --size_;
         return iterator(next_node); // 返回下一个节点的迭代器
     }
@@ -276,6 +286,7 @@ namespace MyStl {
     template<typename T>
     list<T>::~list() {
         clean();
-        delete Node_;
+        node_allocator::destroy(Node_);
+        node_allocator::deallocate(Node_, 1);
     }
 }

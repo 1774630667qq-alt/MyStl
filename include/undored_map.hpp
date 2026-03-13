@@ -2,6 +2,7 @@
 #include <cstddef>
 #include "vector.hpp"
 #include <functional>
+#include "allocator.hpp"
 
 namespace MyStl {
     // 1. 父类（纯指针，非模板）
@@ -60,6 +61,7 @@ namespace MyStl {
         using key_type = K;
         using value_type = V;
         using Node = HashNode<K, V>;
+        using node_allocator = MyStl::allocator<Node>;
 
         HashNodeBase Node_;                           // 实体哨兵节点！(不再是指针)
         MyStl::vector<HashNodeBase*> buckets;         // 桶数组存的全是父类指针
@@ -80,7 +82,8 @@ namespace MyStl {
             
             size_t index = bucket_index(key);
             // 1. new 出带有真实数据的子类节点
-            HashNode<K, V>* newNode = new HashNode<K, V>(MyStl::make_pair(key, val));
+            Node* newNode = node_allocator::allocate(1);
+            node_allocator::construct(newNode, MyStl::make_pair(key, val));
 
             if (buckets[index] == nullptr) {
                 if (Node_.next != nullptr) {
@@ -226,7 +229,8 @@ namespace MyStl {
             HashNodeBase* curr = Node_.next;
             while (curr != nullptr) { // 清空单链表
                 HashNodeBase* temp = curr->next;
-                delete static_cast<HashNode<K, V>*>(curr);
+                node_allocator::destroy(static_cast<Node*>(curr));
+                node_allocator::deallocate(static_cast<Node*>(curr), 1);
                 curr = temp;
             }
             Node_.next = nullptr; // 关键：哨兵节点必须指向空，否则是野指针

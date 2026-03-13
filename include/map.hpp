@@ -29,7 +29,10 @@ namespace MyStl {
         map() : rep() {}
 
         Value& operator[](const key_type& k) {
-            return rep.insert_equal(value_type(k, Value())).first->second;
+            // insert_unique 返回一个 pair: {iterator to element, bool indicating insertion}
+            // .first 是指向元素的迭代器，.second 是一个布尔值
+            // 我们通过迭代器访问到 map 内部的 pair<const Key, Value>，并返回其 value 的引用
+            return insert(value_type(k, Value())).first->second;
         }
         
         iterator begin() {

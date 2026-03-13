@@ -63,7 +63,9 @@ namespace MyStl {
         }
 
         function(const function& other) {
-            base.reset(other.base->clone());
+            if(other.base){
+                base.reset(other.base->clone());
+            }
         }
 
         void swap(function& other) {
@@ -72,7 +74,9 @@ namespace MyStl {
 
         function& operator=(const function& other) {
             function tmp(other); // 过滤掉other为空的情况
-            swap(tmp);
+            if(other.base){
+                swap(tmp);
+            }
             return *this;
         }
 

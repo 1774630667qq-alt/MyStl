@@ -4,6 +4,7 @@
 #include "iterator.hpp"
 #include "utility.hpp"
 #include "functional.hpp"
+#include "allocator.hpp"
 
 namespace MyStl {
     // 1. 颜色类型定义
@@ -179,6 +180,9 @@ namespace MyStl {
         using Node = rb_tree_node_base;
         using link_type = Node *;
 
+        using base_allocator = MyStl::allocator<rb_tree_node_base>;
+        using node_allocator = MyStl::allocator<rb_tree_node<T>>;
+
     private:
         link_type header; // header 节点
         size_t node_count; // 树中节点数量
@@ -187,7 +191,8 @@ namespace MyStl {
 
     public:
         rb_tree(const Compare& c = Compare()) : node_count(0), comp(c), key_get() {
-            header = new Node();
+            header = base_allocator::allocate(1);
+            base_allocator::construct(header);
             header->color = rb_tree_red; // 将哨兵节点硬编码为红色
             header->parent = nullptr;
             header->left = header; // left 指向最小节点
@@ -378,7 +383,9 @@ namespace MyStl {
                     x = x->left;
                 }
             }
-            link_type new_node = static_cast<link_type>(new rb_tree_node<T>(value));
+            rb_tree_node<T>* actual_new_node = node_allocator::allocate(1);
+            node_allocator::construct(actual_new_node, value);
+            link_type new_node = static_cast<link_type>(actual_new_node);
             if (y == header) {
                 // 树是空的
                 header->parent = new_node;
@@ -519,14 +526,14 @@ namespace MyStl {
             if (x != nullptr) x->color = rb_tree_black; // 统一处理红色 x 或收尾
         }
         
-        iterator erase(iterator pos)
+        iterator erase(const_iterator pos)
         {
             link_type z = pos.node;
             link_type y = z;
             link_type x = nullptr;
             link_type x_parent = nullptr;
 
-            iterator result = pos;
+            const_iterator result = pos;
             ++result;
 
             if (y->left == nullptr) {
@@ -587,9 +594,11 @@ namespace MyStl {
             if (z->color == rb_tree_black) {
                 erase_fixup(x, x_parent);
             }
-            delete z;
+            node_allocator::destroy(static_cast<rb_tree_node<T>*>(z));
+            node_allocator::deallocate(static_cast<rb_tree_node<T>*>(z), 1);
             node_count--;
-            return result;
+            // 从 const_iterator 的节点指针构造一个 non-const iterator 并返回
+            return iterator(result.node);
         }
 
         void clean()
@@ -603,12 +612,14 @@ namespace MyStl {
                 } else {
                     link_type y = x->parent;
                     if (y == header) {
-                        delete static_cast<rb_tree_node<T>*>(x);
+                        node_allocator::destroy(static_cast<rb_tree_node<T>*>(x));
+                        node_allocator::deallocate(static_cast<rb_tree_node<T>*>(x), 1);
                         x = nullptr;
                     } else {
                         if (y->left == x) y->left = nullptr;
                         else y->right = nullptr;
-                        delete static_cast<rb_tree_node<T>*>(x);
+                        node_allocator::destroy(static_cast<rb_tree_node<T>*>(x));
+                        node_allocator::deallocate(static_cast<rb_tree_node<T>*>(x), 1);
                         x = y;
                     }
                 }
@@ -622,7 +633,8 @@ namespace MyStl {
         ~rb_tree()
         {
             clean();
-            delete header;
+            base_allocator::destroy(header);
+            base_allocator::deallocate(header, 1);
         }
     };
 }
