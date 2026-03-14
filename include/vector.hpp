@@ -235,7 +235,11 @@ namespace MyStl {
             reserve(vec.m_size);
         }
         for (int i = 0; i < vec.m_size; ++i) {
-            allocator_type::construct(Vec + i, *(vec.Vec + i));
+            if (i < m_size) {
+                Vec[i] = vec.Vec[i]; // 对存活对象，调用覆盖赋值 operator=
+            } else {
+                allocator_type::construct(Vec + i, vec.Vec[i]); // 对未初始化的内存，调用 construct
+            }
         }
         for (int i = vec.m_size; i < m_size; ++i) {
             allocator_type::destroy(Vec + i);
@@ -402,7 +406,7 @@ namespace MyStl {
         }
         if (Vec != nullptr) {
             allocator_type::destroy(Vec, Vec + m_size);
-            allocator_type::deallocate(Vec, m_size);
+            allocator_type::deallocate(Vec, m_capacity);
         }
         Vec = newVec;
         m_capacity = capacity;

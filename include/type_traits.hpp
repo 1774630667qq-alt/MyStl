@@ -512,7 +512,8 @@ namespace MyStl {
      * @note 依赖编译器内置函数 __is_trivially_copy_assignable。
      */
     template<typename T>
-    struct is_trivially_copy_assignable: integral_constant<bool, __is_trivially_copy_assignable(T)> {};
+    struct is_trivially_copy_assignable: integral_constant<bool, __is_trivially_assignable(T&, const T&)> {};
+    
     template<typename T>
     inline constexpr bool is_trivially_copy_assignable_v = is_trivially_copy_assignable<T>::value;
 } 

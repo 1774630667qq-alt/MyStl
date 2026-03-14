@@ -103,6 +103,14 @@ namespace MyStl {
         }
     };
 
+    // 补充在 less 和 greater 附近即可
+    template <typename T>
+    struct equal_to {
+        constexpr bool operator()(const T& lhs, const T& rhs) const {
+            return lhs == rhs;
+        }
+    };
+
     template <typename Pair>
     struct select1st {
         const typename Pair::first_type& operator()(const Pair& x) const {

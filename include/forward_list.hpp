@@ -68,7 +68,7 @@ namespace MyStl {
         using const_reference = const T&;
         using Node = ForwardListNodeBase<T>;
         using ForwardListNode = ForwardListNode<T>;
-        using node_allocator = Alloc::template rebind<ForwardListNode>::other;
+        using node_allocator = typename Alloc::template rebind<ForwardListNode>::other;
 
         private:
         Node Node_;
@@ -169,7 +169,7 @@ namespace MyStl {
     template<typename T, typename Alloc>
     void ForwardList<T, Alloc>::pop_front() {
         if (!empty()) {
-            Node* p = static_cast<ForwardListNode<T>* >(Node_.next);
+            ForwardListNode* p = static_cast<ForwardListNode*>(Node_.next);
             Node_.next = p->next;
             node_allocator::destroy(p);
             node_allocator::deallocate(p, 1);
@@ -202,7 +202,7 @@ namespace MyStl {
     typename ForwardList<T, Alloc>::iterator ForwardList<T, Alloc>::erase_after(iterator pos) {
         if (pos == end()) return pos;
         Node* p = pos.ptr;
-        Node* next_node = static_cast<ForwardListNode<T>* >(p->next);
+        ForwardListNode* next_node = static_cast<ForwardListNode*>(p->next);
         p->next = next_node->next;
         node_allocator::destroy(next_node);
         node_allocator::deallocate(next_node, 1);

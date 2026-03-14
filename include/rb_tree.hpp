@@ -438,7 +438,9 @@ namespace MyStl {
             // 如果能活着走出 while 循环，说明绝对没有重复元素！
             // 并且 y 已经稳稳地停在了新节点应该挂载的父节点上！
             
-            link_type new_node = static_cast<link_type>(new rb_tree_node<T>(value));
+            rb_tree_node<T>* actual_new_node = node_allocator::allocate(1);
+            node_allocator::construct(actual_new_node, value);
+            link_type new_node = static_cast<link_type>(actual_new_node);
             if (y == header) { // 空树特判
                 header->parent = new_node;
                 header->left = new_node;

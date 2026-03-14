@@ -1,24 +1,24 @@
 /*
  * @Author: Zhang YuHua 1774630667@qq.com
- * @Date: 2026-02-22 12:36:00
+ * @Date: 2026-03-14 17:57:50
  * @LastEditors: Zhang YuHua 1774630667@qq.com
- * @LastEditTime: 2026-03-14 17:53:53
- * @FilePath: /MyStl/include/unordered_map.hpp
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AEtem
+ * @LastEditTime: 2026-03-14 18:03:36
+ * @FilePath: /MyStl/include/unordered_multimap.hpp
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
+#pragma once
+#include "hashtable.h"
 #include "utility.hpp"
-#include <cstddef>
-#include "vector.hpp"
 #include "functional.hpp"
 #include "allocator.hpp"
 
 namespace MyStl {
-    template <typename Key,
-            typename Value,
+    template<typename Key, 
+            typename Value, 
             typename HashFcn = MyStl::hash<Key>, 
             typename EqualKey = MyStl::equal_to<Key>, 
             typename Alloc = MyStl::allocator<MyStl::pair<const Key, Value>>>
-    class unordered_map {
+    class unordered_multimap {
         public:
         using value_type = MyStl::pair<const Key, Value>;
         using key_type = Key;
@@ -35,15 +35,16 @@ namespace MyStl {
         HTable rep;
 
         public:
-        unordered_map() : rep() {}
+        unordered_multimap() : rep() {}
         const_iterator begin() const { return rep.begin(); }
         const_iterator end() const { return rep.end(); }
         size_t size() const { return rep.size(); }
         bool empty() const { return rep.empty(); }
         const_iterator find(const Key& key) { return rep.find(key); }
         MyStl::pair<iterator, bool> insert(const value_type& value) { return rep.insert_unique(value); }
+        MyStl::pair<iterator, iterator> equal_range(const Key& key) { return rep.equal_range(key); }
         void erase(const_iterator pos) { rep.erase(pos); }
         void clean() { rep.clear(); }
-        ~unordered_map() {}
+        ~unordered_multimap() {}
     };
 }
