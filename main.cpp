@@ -11,12 +11,11 @@
 #include <iostream>
 #include "function.hpp"
 #include <unordered_map>
+#include <string>
 
 
 signed main() {
-    std::unordered_map<int, int> mp;
-    auto p = mp.insert(std::make_pair(1, 2));
-    auto p1 = mp.insert(std::make_pair(1, 3));
-    std::cout << p1.second << std::endl;
+    std::string s = "hello";
+    std::cout << *s.begin() << std::endl;
     return 0;
 }
