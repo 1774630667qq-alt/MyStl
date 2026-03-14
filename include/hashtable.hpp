@@ -2,7 +2,7 @@
  * @Author: Zhang YuHua 1774630667@qq.com
  * @Date: 2026-03-14 16:00:31
  * @LastEditors: Zhang YuHua 1774630667@qq.com
- * @LastEditTime: 2026-03-14 17:41:11
+ * @LastEditTime: 2026-03-14 18:14:38
  * @FilePath: /MyStl/include/hashtable.hpp
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -277,24 +277,45 @@ namespace MyStl {
             return MyStl::make_pair(it, end());
         }
 
-        iterator erase(const_iterator pos) { 
-            if (pos == end()) {
-                return end();
+        void erase(const_iterator pos) {
+            if (pos == end()) return;
+            
+            Node* p = static_cast<Node*>(pos.ptr);
+            key_type key = key_get(p->data);
+            size_t index = bucket_index(key);
+            
+            // 找到 p 的前驱节点 (因为是单链表，只能从桶记录的前驱开始往后找)
+            link_type* prev = buckets_[index]; 
+            while (prev->next != p) {
+                prev = prev->next;
             }
-            Node* node = static_cast<Node*>(pos.ptr);
-            size_t index = bucket_index(key_get(node->data));
-            link_type* prev = buckets_[index];
-            while (prev->next != node) {
-                prev = static_cast<link_type*>(prev->next);
-                if (prev == nullptr) {
-                    return end();
+            
+            // 1. 物理断链
+            prev->next = p->next;
+            
+            // 2. 如果 p 是单链表的最后一个节点，或者 p 的下一个节点属于其他桶
+            // 这意味着 "下一个桶" 的前驱指针原本是指向 p 的，现在必须更新为 prev！
+            if (p->next != nullptr) {
+                key_type next_key = key_get(static_cast<Node*>(p->next)->data);
+                size_t next_index = bucket_index(next_key);
+                if (next_index != index) {
+                    buckets_[next_index] = prev;
                 }
             }
-            prev->next = node->next;
+            
+            // 3. 如果删除 p 之后，这个桶变空了
+            if (prev->next == nullptr || 
+                bucket_index(key_get(static_cast<Node*>(prev->next)->data)) != index) {
+                // 且如果 prev 就是桶最初记录的前驱，说明该桶真的一个元素都没了
+                if (prev == buckets_[index]) {
+                    buckets_[index] = nullptr;
+                }
+            }
+
+            // 4. 释放内存
+            node_allocator::destroy(p);
+            node_allocator::deallocate(p, 1);
             --size_;
-            node_allocator::destroy(node);
-            node_allocator::deallocate(node, 1);
-            return iterator(prev->next);
         }
 
         ~hashtable() {
