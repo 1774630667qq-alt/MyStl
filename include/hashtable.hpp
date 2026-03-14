@@ -22,7 +22,7 @@ namespace MyStl {
     template<typename T>
     struct HashTableNode : public HashTableBase {
         T data;
-        HashTable(const T& d) : data(d) {}
+        HashTableNode(const T& d) : data(d) {}
     };
 
     template<typename T, bool IsConst = false>
@@ -174,10 +174,10 @@ namespace MyStl {
             Node* first_node = static_cast<Node*>(first_base);
 
             for (iterator it(first_node); it != end(); ++it) {
-                if (bucket_index(key_get(it->first)) != index) { // 越界检查
+                if (bucket_index(key_get(*it)) != index) { // 越界检查
                     break;
                 }
-                if (equal_(key_get(it->first), key)) {
+                if (equal_(key_get(*it), key)) {
                     return it;
                 }
             }
@@ -206,10 +206,10 @@ namespace MyStl {
                 ++size_;
             } else {
                 for (iterator it(static_cast<Node*>(buckets_[index]->next)); it != end(); ++it) {
-                    if (bucket_index(key_get(it->first)) != index) {
+                    if (bucket_index(key_get(*it)) != index) {
                         break;
                     }
-                    if (equal_(key_get(it->first), key_get(value))) {
+                    if (equal_(key_get(*it), key_get(value))) {
                         // 冲突释放申请的空间
                         node_allocator::destroy(newNode);
                         node_allocator::deallocate(newNode, 1);
@@ -245,10 +245,10 @@ namespace MyStl {
                 ++size_;
             } else {
                 for (iterator it = static_cast<Node*>(buckets_[index]->next); it != end(); ++it) {
-                    if (bucket_index(key_get(it->first)) != index) {
+                    if (bucket_index(key_get(*it)) != index) {
                         break;
                     }
-                    if (equal_(key_get(it->first), key_get(value))) {
+                    if (equal_(key_get(*it), key_get(value))) {
                         // 相同的key后插入
                         newNode->next = it->next;
                         it->next = newNode;
@@ -275,6 +275,26 @@ namespace MyStl {
                 }
             }
             return MyStl::make_pair(it, end());
+        }
+
+        iterator erase(const_iterator pos) { 
+            if (pos == end()) {
+                return end();
+            }
+            Node* node = static_cast<Node*>(pos.ptr);
+            size_t index = bucket_index(key_get(node->data));
+            link_type* prev = buckets_[index];
+            while (prev->next != node) {
+                prev = static_cast<link_type*>(prev->next);
+                if (prev == nullptr) {
+                    return end();
+                }
+            }
+            prev->next = node->next;
+            --size_;
+            node_allocator::destroy(node);
+            node_allocator::deallocate(node, 1);
+            return iterator(prev->next);
         }
 
         ~hashtable() {

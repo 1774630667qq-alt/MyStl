@@ -2,7 +2,7 @@
  * @Author: Zhang YuHua 1774630667@qq.com
  * @Date: 2026-03-14 17:57:50
  * @LastEditors: Zhang YuHua 1774630667@qq.com
- * @LastEditTime: 2026-03-14 18:03:36
+ * @LastEditTime: 2026-03-14 18:08:35
  * @FilePath: /MyStl/include/unordered_multimap.hpp
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -32,19 +32,19 @@ namespace MyStl {
         using const_reference = const value_type&;
 
         private:
-        HTable rep;
+        HTable h_table;
 
         public:
-        unordered_multimap() : rep() {}
-        const_iterator begin() const { return rep.begin(); }
-        const_iterator end() const { return rep.end(); }
-        size_t size() const { return rep.size(); }
-        bool empty() const { return rep.empty(); }
-        const_iterator find(const Key& key) { return rep.find(key); }
-        MyStl::pair<iterator, bool> insert(const value_type& value) { return rep.insert_unique(value); }
-        MyStl::pair<iterator, iterator> equal_range(const Key& key) { return rep.equal_range(key); }
-        void erase(const_iterator pos) { rep.erase(pos); }
-        void clean() { rep.clear(); }
+        unordered_multimap() : h_table() {}
+        const_iterator begin() const { return h_table.begin(); }
+        const_iterator end() const { return h_table.end(); }
+        size_t size() const { return h_table.size(); }
+        bool empty() const { return h_table.empty(); }
+        const_iterator find(const Key& key) { return h_table.find(key); }
+        MyStl::pair<iterator, bool> insert(const value_type& value) { return h_table.insert_unique(value); }
+        MyStl::pair<iterator, iterator> equal_range(const Key& key) { return h_table.equal_range(key); }
+        void erase(const_iterator pos) { h_table.erase(pos); }
+        void clean() { h_table.clear(); }
         ~unordered_multimap() {}
     };
 }

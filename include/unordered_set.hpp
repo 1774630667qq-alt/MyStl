@@ -22,18 +22,18 @@ namespace MyStl {
         using const_reference = const T&;
 
         private:
-        HTable rep;
+        HTable h_table;
 
         public:
-        unordered_set() : rep() {}
-        const_iterator begin() const { return rep.begin(); }
-        const_iterator end() const { return rep.end(); }
-        size_t size() const { return rep.size(); }
-        bool empty() const { return rep.empty(); }
-        const_iterator find(const T& value) { return rep.find(value); }
-        MyStl::pair<iterator, bool> insert(const T& value) { return rep.insert_unique(value); }
-        void erase(const_iterator pos) { rep.erase(pos); }
-        void clean() { rep.clear(); }
+        unordered_set() : h_table() {}
+        const_iterator begin() const { return h_table.begin(); }
+        const_iterator end() const { return h_table.end(); }
+        size_t size() const { return h_table.size(); }
+        bool empty() const { return h_table.empty(); }
+        const_iterator find(const T& value) { return h_table.find(value); }
+        MyStl::pair<iterator, bool> insert(const T& value) { return h_table.insert_unique(value); }
+        void erase(const_iterator pos) { h_table.erase(pos); }
+        void clean() { h_table.clear(); }
         ~unordered_set() {}
     };
 } // namespace MyStl
