@@ -1,6 +1,6 @@
 #pragma once
 #include "functional.hpp"
-#include "hashtable.h"
+#include "hashtable.hpp"
 #include "utility.hpp"
 #include "allocator.hpp"
 

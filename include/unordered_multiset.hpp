@@ -9,7 +9,7 @@ namespace MyStl {
             typename HashFcn = MyStl::hash<T>, 
             typename EqualKey = MyStl::equal_to<T>, 
             typename Alloc = MyStl::allocator<T>>
-    class unordered_set {
+    class unordered_multiset {
         public:
         using value_type = T;
         using HTable = hashtable<T, T, HashFcn, identity<T>, EqualKey, Alloc>;
@@ -25,7 +25,7 @@ namespace MyStl {
         HTable h_table;
 
         public:
-        unordered_set() : h_table() {}
+        unordered_multiset() : h_table() {}
         const_iterator begin() const { return h_table.begin(); }
         const_iterator end() const { return h_table.end(); }
         size_t size() const { return h_table.size(); }
@@ -35,6 +35,6 @@ namespace MyStl {
         MyStl::pair<iterator, iterator> equal_range(const T& value) { return h_table.equal_range(value); }
         void erase(const_iterator pos) { h_table.erase(pos); }
         void clean() { h_table.clear(); }
-        ~unordered_set() {}
+        ~unordered_multiset() {}
     };
 }

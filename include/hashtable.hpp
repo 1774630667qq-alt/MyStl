@@ -27,6 +27,9 @@ namespace MyStl {
 
     template<typename T, bool IsConst = false>
     class HashTableIterator {
+        template <typename V, typename K, typename HF, typename ExK, typename EqK, typename A>
+        friend class hashtable;
+        
         friend class HashTableIterator<T, !IsConst>;
 
         public:
@@ -76,7 +79,7 @@ namespace MyStl {
 
         private:
         using Node = HashTableNode<Value>;
-        using node_allocator = Alloc::template rebind<Node>::other;
+        using node_allocator = typename Alloc::template rebind<Node>::other;
         using link_type = HashTableBase;
 
         HashFcn hasher_;
@@ -87,7 +90,7 @@ namespace MyStl {
         size_t size_;
 
         size_t bucket_index(const Key& key) const {
-            return bucket_index(key);
+            return hasher_(key) % buckets_.size();
         }
 
         public:
@@ -250,8 +253,19 @@ namespace MyStl {
                     }
                     if (equal_(key_get(*it), key_get(value))) {
                         // 相同的key后插入
-                        newNode->next = it->next;
-                        it->next = newNode;
+                        Node* curr_node = static_cast<Node*>(it.ptr);
+                        newNode->next = curr_node->next;
+                        curr_node->next = newNode;
+                        
+                        // 【架构师级修复】：如果 curr_node 恰好是本桶的最后一个节点，
+                        // 那么插入 newNode 后，"下一个桶" 的前驱节点就变成了 newNode！
+                        if (newNode->next != nullptr) {
+                            size_t next_index = bucket_index(key_get(static_cast<Node*>(newNode->next)->data));
+                            if (next_index != index) {
+                                buckets_[next_index] = newNode;
+                            }
+                        }
+                        
                         ++size_;
                         return iterator(newNode);
                     }
@@ -270,7 +284,7 @@ namespace MyStl {
                 return MyStl::make_pair(end(), end());
             }
             for (iterator curr = it; curr != end(); ++curr) {
-                if (!equal_(key_get(curr->first), key)) {
+            if (!equal_(key_get(*curr), key)) {
                     return MyStl::make_pair(it, curr);
                 }
             }
