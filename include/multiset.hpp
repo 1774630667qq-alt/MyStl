@@ -3,13 +3,15 @@
 #include "functional.hpp"
 
 namespace MyStl {
-    template<typename Key, typename Compare = MyStl::less<Key>>
+    template<typename Key, 
+            typename Compare = MyStl::less<Key>,
+            typename Alloc = MyStl::allocator<Key>>
     class multiset {
     public:
         using value_type = Key;
         using key_type = Key;
         // 底层引擎：使用 identity 提取键，且 Key 就是 Value
-        using rep_type = MyStl::rb_tree<Key, Key, MyStl::identity<Key>, Compare>;
+        using rep_type = MyStl::rb_tree<Key, Key, MyStl::identity<Key>, Compare, Alloc>;
         
         // 【关键防御】迭代器强制绑定为常迭代器
         using iterator = typename rep_type::const_iterator;

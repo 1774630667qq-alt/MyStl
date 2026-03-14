@@ -13,12 +13,13 @@
 namespace MyStl {
     template<typename Key, 
             typename Value,
-            typename Compare = MyStl::less<Key>>
+            typename Compare = MyStl::less<Key>,
+            typename Alloc = MyStl::allocator<MyStl::pair<const Key, Value>>>
     class map {
         public:
         using value_type = MyStl::pair<const Key, Value>;
         using key_type = Key;
-        using rep_type = MyStl::rb_tree<Key, value_type, MyStl::select1st<value_type>, Compare>;
+        using rep_type = MyStl::rb_tree<Key, value_type, MyStl::select1st<value_type>, Compare, Alloc>;
         using iterator = typename rep_type::iterator;
         using const_iterator = typename rep_type::const_iterator;
         

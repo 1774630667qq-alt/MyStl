@@ -7,7 +7,7 @@ namespace MyStl {
         return 64; // 每个缓冲区存放64个元素
     }
 
-    template<typename T> class deque;
+    template<typename T, typename Alloc = MyStl::allocator<T>> class deque;
 
     template<typename T, bool IsConst = false>
     class dequeIterator {
@@ -110,7 +110,7 @@ namespace MyStl {
     };
 
 
-    template<typename T>
+    template<typename T, typename Alloc>
     class deque {
         public:
         using iterator = dequeIterator<T>;
@@ -121,8 +121,8 @@ namespace MyStl {
         using const_reference = const T&;
         using buffer_pointer = pointer*;
         
-        using map_allocator = MyStl::allocator<pointer>;
-        using data_allocator = MyStl::allocator<T>;
+        using map_allocator = typename Alloc::template rebind<pointer>::other;
+        using data_allocator = typename Alloc::template rebind<T>::other;
         private:
         buffer_pointer map; // 指向缓冲区指针的指针
         size_t map_size; // map的大小（缓冲区指针的数量）

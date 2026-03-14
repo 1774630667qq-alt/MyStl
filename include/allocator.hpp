@@ -1,3 +1,11 @@
+/*
+ * @Author: Zhang YuHua 1774630667@qq.com
+ * @Date: 2026-03-13 20:23:20
+ * @LastEditors: Zhang YuHua 1774630667@qq.com
+ * @LastEditTime: 2026-03-14 14:34:43
+ * @FilePath: /MyStl/include/allocator.hpp
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 #include "construct.hpp"
 #include <cstddef>
 
@@ -12,6 +20,10 @@ namespace MyStl{
         using const_reference = const T&;
         using size_type       = size_t;
         using difference_type = ptrdiff_t;
+        template<typename U>
+        struct rebind {
+            using other = allocator<U>;
+        };
 
         public:
         static T* allocate(size_t n) {

@@ -69,12 +69,13 @@ namespace MyStl {
     template<typename Key,
             typename T,
             typename KeyOfValue,
-            typename Compare = MyStl::less<Key>>
+            typename Compare = MyStl::less<Key>,
+            typename Alloc = MyStl::allocator<T>>
     class rb_tree;
 
     template<typename T, bool IsConst = false>
     class rb_tree_iterator {
-        template<typename Key, typename Val, typename KeyOfValue, typename Compare>
+        template<typename Key, typename Val, typename KeyOfValue, typename Compare, typename Alloc>
         friend class rb_tree;
 
         friend class rb_tree_iterator<T, !IsConst>;
@@ -166,7 +167,8 @@ namespace MyStl {
     template<typename Key,
             typename T,
             typename KeyOfValue,
-            typename Compare>
+            typename Compare,
+            typename Alloc>
     class rb_tree {
     public:
         using value_type = T;
@@ -180,8 +182,8 @@ namespace MyStl {
         using Node = rb_tree_node_base;
         using link_type = Node *;
 
-        using base_allocator = MyStl::allocator<rb_tree_node_base>;
-        using node_allocator = MyStl::allocator<rb_tree_node<T>>;
+        using base_allocator = typename Alloc::template rebind<rb_tree_node_base>::other;
+        using node_allocator = typename Alloc::template rebind<rb_tree_node<T>>::other;
 
     private:
         link_type header; // header 节点
@@ -333,6 +335,7 @@ namespace MyStl {
         void insert_fixup(link_type z) {
             while (z->parent != header && z->parent->color == rb_tree_red) {
                 // error 1: 根节点进入会引发死循环
+
                 if (z->parent == z->parent->parent->left) {
                     link_type y = z->parent->parent->right; // 叔叔节点
                     if (y != nullptr && y->color == rb_tree_red) {

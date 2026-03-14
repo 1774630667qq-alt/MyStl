@@ -82,7 +82,7 @@ namespace MyStl {
         return it + n;
     }
 
-    template<typename T>
+    template<typename T, typename Alloc = MyStl::allocator<T>>
     class vector
     {
         public:
@@ -93,6 +93,7 @@ namespace MyStl {
         using reference = T&;
         using const_pointer = const T*;
         using const_reference = const T&;
+        using difference_type = std::ptrdiff_t;
 
         using reverse_iterator = MyStl::reverse_iterator<iterator>;
         using const_reverse_iterator = MyStl::reverse_iterator<const_iterator>;
@@ -100,11 +101,14 @@ namespace MyStl {
         T* Vec;
         int m_size;
         int m_capacity;
-        using allocator_type = MyStl::allocator<T>;
+        using allocator_type = Alloc;
         public:
         vector();
         vector(int size, const T& value = T());
         vector(std::initializer_list<T> list);
+        template<typename inputIterator,
+            typename = MyStl::enable_if_t<!MyStl::is_integral_v<inputIterator>>>
+        vector(inputIterator first, inputIterator last); 
         vector(const vector& vec);
         vector(vector&& vec);
         ~vector();
@@ -130,6 +134,9 @@ namespace MyStl {
         void reserve(int capacity);
         void resize(int new_size, const T& value = T());
         void assign(int size, const T& value);
+        template<typename inputIterator,
+            typename = MyStl::enable_if_t<!MyStl::is_integral_v<inputIterator>>>
+        void assign(inputIterator first, inputIterator last);
         template<typename... Args>
         void emplace_back(Args&&... args) noexcept;
         iterator erase(iterator pos);
@@ -143,18 +150,18 @@ namespace MyStl {
         const_reference back() const { return Vec[m_size - 1]; }
     };
 
-    template<typename T>
-    vector<T>::vector() : Vec(nullptr), m_size(0), m_capacity(0) {}
-    template<typename T>
-    vector<T>::vector(const vector<T>& vec): m_size(vec.m_size), m_capacity(vec.m_capacity) {
+    template<typename T, typename Alloc>
+    vector<T, Alloc>::vector() : Vec(nullptr), m_size(0), m_capacity(0) {}
+    template<typename T, typename Alloc>
+    vector<T, Alloc>::vector(const vector& vec): m_size(vec.m_size), m_capacity(vec.m_capacity) {
         Vec = allocator_type::allocate(m_capacity);
         for (int i = 0; i < m_size; ++i) {
             allocator_type::construct(Vec + i, vec.Vec[i]);
         }
     }
 
-    template<typename T>
-    vector<T>::vector(int size, const T& value) : Vec(nullptr), m_size(0), m_capacity(0) {
+    template<typename T, typename Alloc>
+    vector<T, Alloc>::vector(int size, const T& value) : Vec(nullptr), m_size(0), m_capacity(0) {
         reserve(size);
         for (int i = 0; i < size; ++i) {
             allocator_type::construct(Vec + i, value);
@@ -162,8 +169,19 @@ namespace MyStl {
         m_size = size;
     }
 
-    template<typename T>
-    vector<T>::vector(vector<T>&& vec) : m_size(vec.m_size), m_capacity(vec.m_capacity) {
+    template<typename T, typename Alloc>
+    template<typename inputIterator, typename>
+    vector<T, Alloc>::vector(inputIterator first, inputIterator last) : Vec(nullptr), m_size(0), m_capacity(0) {
+        difference_type len = MyStl::distance(first, last);
+        reserve(len);
+        for (; first != last; ++first) {
+            MyStl::construct(Vec + m_size, *first);
+            ++m_size;
+        }
+    }
+
+    template<typename T, typename Alloc>
+    vector<T, Alloc>::vector(vector&& vec) : m_size(vec.m_size), m_capacity(vec.m_capacity) {
         m_size = vec.m_size;
         m_capacity = vec.m_capacity;
         Vec = vec.Vec;
@@ -172,8 +190,8 @@ namespace MyStl {
         vec.m_capacity = 0;
     }
 
-    template<typename T>
-    vector<T>::vector(std::initializer_list<T> list) : m_size(list.size()), m_capacity(list.size()) {
+    template<typename T, typename Alloc>
+    vector<T, Alloc>::vector(std::initializer_list<T> list) : m_size(list.size()), m_capacity(list.size()) {
         Vec = allocator_type::allocate(m_capacity);
         int index = 0;
         for (const auto& item : list) {
@@ -182,8 +200,8 @@ namespace MyStl {
         }
     }
 
-    template<typename T>
-    vector<T>::~vector() {
+    template<typename T, typename Alloc>
+    vector<T, Alloc>::~vector() {
         clear();
         if (m_capacity > 0) 
             allocator_type::deallocate(Vec, m_capacity);
@@ -192,38 +210,43 @@ namespace MyStl {
         m_capacity = 0;
     }
 
-    template<typename T>
-    T& vector<T>::operator[](int index) {
+    template<typename T, typename Alloc>
+    T& vector<T, Alloc>::operator[](int index) {
         if (index < 0 || index >= m_size) {
             throw std::out_of_range("Index out of range");
         }
         return Vec[index];
     }
 
-    template<typename T>
-    typename vector<T>::const_reference vector<T>::operator[](int index) const {
+    template<typename T, typename Alloc>
+    typename vector<T, Alloc>::const_reference vector<T, Alloc>::operator[](int index) const {
         if (index < 0 || index >= m_size) {
             throw std::out_of_range("Index out of range");
         }
         return Vec[index];
     }
 
-    template<typename T>
-    vector<T>& vector<T>::operator=(const vector<T>& vec) {
+    template<typename T, typename Alloc>
+    vector<T, Alloc>& vector<T, Alloc>::operator=(const vector& vec) {
         if (this == &vec) {
             return *this;
         }
+        if (m_capacity < vec.m_size) {
+            reserve(vec.m_size);
+        }
+        for (int i = 0; i < vec.m_size; ++i) {
+            allocator_type::construct(Vec + i, *(vec.Vec + i));
+        }
+        for (int i = vec.m_size; i < m_size; ++i) {
+            allocator_type::destroy(Vec + i);
+        }
         m_size = vec.m_size;
         m_capacity = vec.m_capacity;
-        Vec = allocator_type::allocate(m_capacity);
-        for (int i = 0; i < m_size; ++i) {
-            allocator_type::construct(Vec + i, vec.Vec[i]);
-        }
         return *this;
     }
 
-    template<typename T>
-    vector<T>& vector<T>::operator=(std::initializer_list<T> list) {
+    template<typename T, typename Alloc>
+    vector<T, Alloc>& vector<T, Alloc>::operator=(std::initializer_list<T> list) {
         m_size = list.size();
         m_capacity = list.size();
         Vec = allocator_type::allocate(m_capacity);
@@ -235,58 +258,58 @@ namespace MyStl {
         return *this;
     }
 
-    template<typename T>
-    typename vector<T>::iterator vector<T>::begin() {
+    template<typename T, typename Alloc>
+    typename vector<T, Alloc>::iterator vector<T, Alloc>::begin() {
         return iterator(Vec);
     }
 
-    template<typename T>
-    typename vector<T>::iterator vector<T>::end() {
+    template<typename T, typename Alloc>
+    typename vector<T, Alloc>::iterator vector<T, Alloc>::end() {
         return iterator(Vec + m_size);
     }
 
-    template<typename T>
-    typename vector<T>::reverse_iterator vector<T>::rbegin() {
+    template<typename T, typename Alloc>
+    typename vector<T, Alloc>::reverse_iterator vector<T, Alloc>::rbegin() {
         return reverse_iterator(end());
     }
 
-    template<typename T>
-    typename vector<T>::reverse_iterator vector<T>::rend() {
+    template<typename T, typename Alloc>
+    typename vector<T, Alloc>::reverse_iterator vector<T, Alloc>::rend() {
         return reverse_iterator(begin());
     }
 
-    template<typename T>
-    typename vector<T>::const_reverse_iterator vector<T>::rbegin() const {
+    template<typename T, typename Alloc>
+    typename vector<T, Alloc>::const_reverse_iterator vector<T, Alloc>::rbegin() const {
         return const_reverse_iterator(end());
     }   
 
-    template<typename T>
-    typename vector<T>::const_reverse_iterator vector<T>::rend() const {
+    template<typename T, typename Alloc>
+    typename vector<T, Alloc>::const_reverse_iterator vector<T, Alloc>::rend() const {
         return const_reverse_iterator(begin());
     }
 
-    template<typename T>
-    typename vector<T>::const_iterator vector<T>::begin() const {
+    template<typename T, typename Alloc>
+    typename vector<T, Alloc>::const_iterator vector<T, Alloc>::begin() const {
         return const_iterator(Vec);
     }
 
-    template<typename T>
-    typename vector<T>::const_iterator vector<T>::end() const {
+    template<typename T, typename Alloc>
+    typename vector<T, Alloc>::const_iterator vector<T, Alloc>::end() const {
         return const_iterator(Vec + m_size);
     }
 
-    template<typename T>
-    typename vector<T>::const_iterator vector<T>::cbegin() const {
+    template<typename T, typename Alloc>
+    typename vector<T, Alloc>::const_iterator vector<T, Alloc>::cbegin() const {
         return const_iterator(Vec);
     }
 
-    template<typename T>
-    typename vector<T>::const_iterator vector<T>::cend() const {
+    template<typename T, typename Alloc>
+    typename vector<T, Alloc>::const_iterator vector<T, Alloc>::cend() const {
         return const_iterator(Vec + m_size);
     }
 
-    template<typename T>
-    vector<T>& vector<T>::operator=(vector<T>&& vec) noexcept {
+    template<typename T, typename Alloc>
+    vector<T, Alloc>& vector<T, Alloc>::operator=(vector&& vec) noexcept {
         if (this == &vec) {
             return *this;
         }
@@ -301,8 +324,8 @@ namespace MyStl {
         return *this;
     }
 
-    template<typename T>
-    bool vector<T>::operator==(const vector<T>& vec) const {
+    template<typename T, typename Alloc>
+    bool vector<T, Alloc>::operator==(const vector& vec) const {
         if (this == &vec) {
             return true;
         }
@@ -317,27 +340,37 @@ namespace MyStl {
         return true;
     }
 
-    template<typename T>
-    void vector<T>::expand() {
+    template<typename T, typename Alloc>
+    void vector<T, Alloc>::expand() {
         int old_capacity = m_capacity;
-        if (m_capacity == 0) {
-            m_capacity = 1;
-        }
-        else {
-            m_capacity *= 2;
-        }
+        m_capacity = (m_capacity == 0) ? 1 : m_capacity * 2;
+        
         T* newVec = allocator_type::allocate(m_capacity);
-        for (int i = 0; i < m_size; ++i) {
-            allocator_type::construct(newVec + i, MyStl::move(Vec[i]));
-            allocator_type::destroy(Vec + i);
+        
+        // 强异常安全防线：如果搬运失败，把刚申请的新内存退回去！
+        try {
+            if (MyStl::is_nothrow_move_constructible_v<T>) {
+                MyStl::uninitialized_move(Vec, Vec + m_size, newVec);
+            } else {
+                MyStl::uninitialized_copy(Vec, Vec + m_size, newVec);
+            }
+        } catch (...) {
+            allocator_type::deallocate(newVec, m_capacity);
+            m_capacity = old_capacity; // 恢复容量状态
+            throw; // 继续向上抛出
         }
-        allocator_type::deallocate(Vec, old_capacity);
+
+        // 全部成功后，再销毁旧数据、释放旧内存
+        if (Vec != nullptr) {
+            allocator_type::destroy(Vec, Vec + m_size);
+            allocator_type::deallocate(Vec, old_capacity); // 修复内存泄漏！
+        }
+        
         Vec = newVec;
-        newVec = nullptr;
     }
 
-    template<typename T>
-    void vector<T>::push_back(const T& value) {
+    template<typename T, typename Alloc>
+    void vector<T, Alloc>::push_back(const T& value) {
         if (m_size >= m_capacity) {
             expand();
         }
@@ -345,31 +378,38 @@ namespace MyStl {
         ++m_size;
     }
 
-    template<typename T>
-    void vector<T>::pop_back() {
+    template<typename T, typename Alloc>
+    void vector<T, Alloc>::pop_back() {
         if (m_size > 0) {
             allocator_type::destroy(Vec + m_size - 1);
             --m_size;
         }
     }
 
-    template<typename T>
-    void vector<T>::reserve(int capacity) {
+    template<typename T, typename Alloc>
+    void vector<T, Alloc>::reserve(int capacity) {
         if (capacity < m_capacity) return; // 只有当新容量大于当前容量时才进行反转和扩容
         T* newVec = allocator_type::allocate(capacity); // 扩容三步走 申请 -> 搬家 -> 释放旧空间
-        for (int i = 0; i < m_size; ++i) {
-            allocator_type::construct(newVec + i, MyStl::move(Vec[i]));
-            allocator_type::destroy(Vec + i);
+        try {
+            if (MyStl::is_nothrow_move_constructible_v<T>) {
+                MyStl::uninitialized_move(Vec, Vec + m_size, newVec);
+            } else {
+                MyStl::uninitialized_copy(Vec, Vec + m_size, newVec);
+            }
+        } catch (...) {
+            allocator_type::deallocate(newVec, capacity);
+            throw;
         }
-        if (m_capacity > 0) {
-            allocator_type::deallocate(Vec, m_capacity);
+        if (Vec != nullptr) {
+            allocator_type::destroy(Vec, Vec + m_size);
+            allocator_type::deallocate(Vec, m_size);
         }
         Vec = newVec;
         m_capacity = capacity;
     }
 
-    template<typename T>
-    void vector<T>::resize(int new_size, const T& value) {
+    template<typename T, typename Alloc>
+    void vector<T, Alloc>::resize(int new_size, const T& value) {
         if (new_size < m_size) {
             // 缩小：析构多余的
             for (int i = new_size; i < m_size; ++i) {
@@ -390,8 +430,8 @@ namespace MyStl {
         m_size = new_size;
     }
 
-    template<typename T>
-    void vector<T>::assign(int size, const T& value) {
+    template<typename T, typename Alloc>
+    void vector<T, Alloc>::assign(int size, const T& value) {
         if (size > m_capacity) {
             reserve(size);
         }
@@ -409,8 +449,30 @@ namespace MyStl {
         m_size = size;
     }
 
-    template<typename T>
-    typename vector<T>::iterator vector<T>::erase(iterator pos) {
+    template<typename T, typename Alloc>
+    template<typename inputIterator, typename>
+    void vector<T, Alloc>::assign(inputIterator first, inputIterator last) {
+        difference_type len = MyStl::distance(first, last);
+        if (len > m_capacity) {
+            reserve(len);
+        }
+        for (int i = 0; i < len; ++i) {
+            if (i < m_size) {
+                Vec[i] = *first;
+                ++first;
+            } else {
+                allocator_type::construct(Vec + i, *first);
+                ++first;
+            }
+        }
+        for (int i = len; i < m_size; ++i) {
+            allocator_type::destroy(Vec + i);
+        }
+        m_size = len;
+    }
+
+    template<typename T, typename Alloc>
+    typename vector<T, Alloc>::iterator vector<T, Alloc>::erase(iterator pos) {
         if (pos < begin() || pos >= end()) {
             throw std::out_of_range("Iterator out of range");
         }
@@ -422,8 +484,8 @@ namespace MyStl {
         return pos;
     }
 
-    template<typename T>
-    typename vector<T>::iterator vector<T>::insert(iterator pos, const T& value) {
+    template<typename T, typename Alloc>
+    typename vector<T, Alloc>::iterator vector<T, Alloc>::insert(iterator pos, const T& value) {
         int index = pos - begin();
         if (index < 0 || index > m_size) {
             throw std::out_of_range("Iterator out of range");
@@ -466,9 +528,9 @@ namespace MyStl {
         return begin() + index;
     }
 
-    template<typename T>
+    template<typename T, typename Alloc>
     template<typename... Args>
-    void vector<T>::emplace_back(Args&&... args) noexcept {
+    void vector<T, Alloc>::emplace_back(Args&&... args) noexcept {
         if (m_size >= m_capacity) {
             expand();
         }
@@ -476,13 +538,13 @@ namespace MyStl {
         ++m_size;
     }
 
-    template<typename T>
-    int vector<T>::size() const {
+    template<typename T, typename Alloc>
+    int vector<T, Alloc>::size() const {
         return this->m_size;
     }
 
-    template<typename T>
-    void vector<T>::clear() {
+    template<typename T, typename Alloc>
+    void vector<T, Alloc>::clear() {
         for (int i = 0; i < m_size; ++i) {
             allocator_type::destroy(Vec + i);
         }

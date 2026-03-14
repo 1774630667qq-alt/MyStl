@@ -1,6 +1,14 @@
+/*
+ * @Author: Zhang YuHua 1774630667@qq.com
+ * @Date: 2026-02-19 09:01:14
+ * @LastEditors: Zhang YuHua 1774630667@qq.com
+ * @LastEditTime: 2026-03-13 20:54:50
+ * @FilePath: /MyStl/include/function.hpp
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 #pragma once
 #include <stdexcept>
-#include <functional>
+#include "functional"
 #include "utility.hpp"
 #include "type_traits.hpp"
 #include "unique_ptr.hpp"
@@ -34,7 +42,6 @@ namespace MyStl {
             // 重写 call 方法
             Ret call(Args... args) override {
                 // TODO 1: 在这里调用内部存储的 f
-                // 提示：记得使用 std::forward<Args>(args)... 来完美转发参数
                 // 形式大概是：return f( ... );
                 return f(MyStl::forward<Args>(args)...);
             }
@@ -56,7 +63,6 @@ namespace MyStl {
         template<typename F>
         function(F f) {
             // TODO 2: 将传入的 f 包装成 CallableImpl<F>
-            // 提示：你需要 new 一个 CallableImpl<F>(std::move(f))
             // 然后把它交给 base 管理 (base.reset(...))
             CallableImpl<F>* Impl = new CallableImpl<F>(MyStl::move(f));
             base.reset(Impl);
@@ -85,7 +91,6 @@ namespace MyStl {
             // TODO 3: 转发调用
             // 1. 检查 base 是否为空 (如果为空，抛出 std::bad_function_call)
             // 2. 如果不为空，调用 base->call(...)
-            // 提示：同样记得用 std::forward
             if (base) {
                 return base->call(MyStl::forward<Args>(args)...);
             }

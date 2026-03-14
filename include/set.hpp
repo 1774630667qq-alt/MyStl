@@ -13,11 +13,12 @@
 namespace MyStl
 {
     template<typename T,
-            typename Compare = MyStl::less<T>>
+            typename Compare = MyStl::less<T>,
+            typename Alloc = MyStl::allocator<T>>
     class set {
         public:
         using value_type = T;
-        using rep_type = MyStl::rb_tree<T, T, MyStl::identity<T>, Compare>;
+        using rep_type = MyStl::rb_tree<T, T, MyStl::identity<T>, Compare, Alloc>;
         using iterator = typename rep_type::const_iterator;
         using const_iterator = typename rep_type::const_iterator;
         using difference_type = typename rep_type::difference_type;

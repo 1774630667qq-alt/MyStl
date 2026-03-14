@@ -3,14 +3,17 @@
 #include "functional.hpp"
 
 namespace MyStl {
-    template<typename Key, typename Value, typename Compare = MyStl::less<Key>>
+    template<typename Key, 
+            typename Value, 
+            typename Compare = MyStl::less<Key>,
+            typename Alloc = MyStl::allocator<MyStl::pair<const Key, Value>>>
     class multimap {
     public:
         // 【基因锁】Key 带有 const 属性，防止篡改！
         using value_type = MyStl::pair<const Key, Value>;
         using key_type = Key;
         // 底层引擎：使用 select1st 提取 first 作为比较的依据
-        using rep_type = MyStl::rb_tree<Key, value_type, MyStl::select1st<value_type>, Compare>;
+        using rep_type = MyStl::rb_tree<Key, value_type, MyStl::select1st<value_type>, Compare, Alloc>;
         
         // 普通迭代器和常迭代器各司其职
         using iterator = typename rep_type::iterator;

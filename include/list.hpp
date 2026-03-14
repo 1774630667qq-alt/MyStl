@@ -22,7 +22,7 @@ namespace MyStl {
     template<typename T, bool IsConst = false>
     struct ListIterator {
         // =========================================================
-        // 🌟 迭代器的 5 个标准“身份证信息” (替代继承)
+        // 🌟 迭代器的 5 个标准"身份证信息" (替代继承)
         using iterator_category = MyStl::bidirectional_iterator_tag; // 迭代器类别
         using value_type        = T;                               // 元素类型
         using difference_type   = ptrdiff_t;                       // 距离类型
@@ -81,7 +81,7 @@ namespace MyStl {
     };
 
     // 3. 链表主体类 (预览，先不用实现具体逻辑)
-    template<typename T>
+    template<typename T, typename Alloc = MyStl::allocator<T>>
     class list {
     public:
         using iterator = ListIterator<T>;
@@ -91,7 +91,7 @@ namespace MyStl {
         using const_pointer = const T*;
         using const_reference = const T&;
         using Node = ListNode<T>;
-        using node_allocator = MyStl::allocator<Node>;
+        using node_allocator = typename Alloc::template rebind<Node>::other;
 
     private:
         // 思考：为了方便，我们要不要在这里用一个 dummy_node (哨兵节点)？
@@ -127,16 +127,17 @@ namespace MyStl {
         const_iterator begin() const;
         const_iterator end() const;
     };
-    template<typename T>
-    list<T>::list(): size_(0) {
+
+    template<typename T, typename Alloc>
+    list<T, Alloc>::list(): size_(0) {
         Node_ = node_allocator::allocate(1);
         node_allocator::construct(Node_); // 构造哨兵节点
         Node_->prev = Node_;
         Node_->next = Node_;
     }
 
-    template<typename T>
-    list<T>::list(const list& other) : size_(0) {
+    template<typename T, typename Alloc>
+    list<T, Alloc>::list(const list& other) : size_(0) {
         Node_ = node_allocator::allocate(1);
         node_allocator::construct(Node_);
         Node_->prev = Node_;
@@ -146,8 +147,8 @@ namespace MyStl {
         }
     }
 
-    template<typename T>
-    list<T>::list(list&& other) noexcept : size_(0) {
+    template<typename T, typename Alloc>
+    list<T, Alloc>::list(list&& other) noexcept : size_(0) {
         Node_ = node_allocator::allocate(1);
         node_allocator::construct(Node_);
         Node_->prev = Node_;
@@ -156,8 +157,8 @@ namespace MyStl {
         MyStl::swap(Node_, other.Node_);
     }
 
-    template<typename T>
-    list<T>& list<T>::operator=(const list& other) {
+    template<typename T, typename Alloc>
+    list<T, Alloc>& list<T, Alloc>::operator=(const list& other) {
         if (this != &other) {
             clean();
             for (const auto& val : other) {
@@ -167,8 +168,8 @@ namespace MyStl {
         return *this;
     }
 
-    template<typename T>
-    list<T>& list<T>::operator=(list&& other) noexcept {
+    template<typename T, typename Alloc>
+    list<T, Alloc>& list<T, Alloc>::operator=(list&& other) noexcept {
         if (this != &other) {
             MyStl::swap(size_, other.size_);
             MyStl::swap(Node_, other.Node_);
@@ -176,8 +177,8 @@ namespace MyStl {
         return *this;
     }
 
-    template<typename T>
-    typename list<T>::iterator list<T>::insert(iterator pos, const T& val) {
+    template<typename T, typename Alloc>
+    typename list<T, Alloc>::iterator list<T, Alloc>::insert(iterator pos, const T& val) {
         Node* p = pos.ptr;
         Node* newnode = node_allocator::allocate(1);
         node_allocator::construct(newnode, val);
@@ -189,40 +190,40 @@ namespace MyStl {
         return iterator(newnode);
     }
 
-    template<typename T>
-    void list<T>::clean() {
+    template<typename T, typename Alloc>
+    void list<T, Alloc>::clean() {
         while (size_ > 0) {
             pop_back();
         }
     }
 
-    template<typename T>
-    size_t list<T>::size() const {
+    template<typename T, typename Alloc>
+    size_t list<T, Alloc>::size() const {
         return size_;
     }
 
-    template<typename T>
-    typename list<T>::reference list<T>::front() {
+    template<typename T, typename Alloc>
+    typename list<T, Alloc>::reference list<T, Alloc>::front() {
         return Node_->next->data;
     }
 
-    template<typename T>
-    typename list<T>::const_reference list<T>::front() const {
+    template<typename T, typename Alloc>
+    typename list<T, Alloc>::const_reference list<T, Alloc>::front() const {
         return Node_->next->data;
     }
 
-    template<typename T>
-    typename list<T>::reference list<T>::back() {
+    template<typename T, typename Alloc>
+    typename list<T, Alloc>::reference list<T, Alloc>::back() {
         return Node_->prev->data;
     }
 
-    template<typename T>
-    typename list<T>::const_reference list<T>::back() const {
+    template<typename T, typename Alloc>
+    typename list<T, Alloc>::const_reference list<T, Alloc>::back() const {
         return Node_->prev->data;
     }
 
-    template<typename T>
-    typename list<T>::iterator list<T>::erase(iterator pos) {
+    template<typename T, typename Alloc>
+    typename list<T, Alloc>::iterator list<T, Alloc>::erase(iterator pos) {
         if (pos == end()) return pos; // 如果是 end，直接返回 end
         Node* p = pos.ptr;
         Node* next_node = p->next;
@@ -234,57 +235,57 @@ namespace MyStl {
         return iterator(next_node); // 返回下一个节点的迭代器
     }
 
-    template<typename T>
-    void list<T>::pop_back() {
+    template<typename T, typename Alloc>
+    void list<T, Alloc>::pop_back() {
         if (size_ > 0) {
             erase(Node_->prev);
         }
     }
 
-    template<typename T>
-    void list<T>::pop_front() {
+    template<typename T, typename Alloc>
+    void list<T, Alloc>::pop_front() {
         if (size_ > 0) {
             erase(Node_->next);
         }
     }
 
-    template<typename T>
-    bool list<T>::empty() const {
+    template<typename T, typename Alloc>
+    bool list<T, Alloc>::empty() const {
         return size_ == 0;
     }
 
-    template<typename T>
-    void list<T>::push_back(const T& val) {
+    template<typename T, typename Alloc>
+    void list<T, Alloc>::push_back(const T& val) {
         insert(Node_, val);
     }
 
-    template<typename T>
-    void list<T>::push_front(const T& val) {
+    template<typename T, typename Alloc>
+    void list<T, Alloc>::push_front(const T& val) {
         insert(begin(), val);
     }
 
-    template<typename T>
-    typename list<T>::iterator list<T>::begin() {
+    template<typename T, typename Alloc>
+    typename list<T, Alloc>::iterator list<T, Alloc>::begin() {
         return iterator(Node_->next);
     }
 
-    template<typename T>
-    typename list<T>::iterator list<T>::end() {
+    template<typename T, typename Alloc>
+    typename list<T, Alloc>::iterator list<T, Alloc>::end() {
         return iterator(Node_);
     }
 
-    template<typename T>
-    typename list<T>::const_iterator list<T>::begin()const {
+    template<typename T, typename Alloc>
+    typename list<T, Alloc>::const_iterator list<T, Alloc>::begin()const {
         return const_iterator(Node_->next);
     }
 
-    template<typename T>
-    typename list<T>::const_iterator list<T>::end() const {
+    template<typename T, typename Alloc>
+    typename list<T, Alloc>::const_iterator list<T, Alloc>::end() const {
         return const_iterator(Node_);
     }
 
-    template<typename T>
-    list<T>::~list() {
+    template<typename T, typename Alloc>
+    list<T, Alloc>::~list() {
         clean();
         node_allocator::destroy(Node_);
         node_allocator::deallocate(Node_, 1);
